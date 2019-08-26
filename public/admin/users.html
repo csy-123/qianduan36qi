@@ -31,9 +31,9 @@
         <h1>用户</h1>
       </div>
       <!-- 有错误信息时展示 -->
-      <div class="alert alert-danger">
+      <!-- <div class="alert alert-danger">
         <strong>错误！</strong>发生XXX错误
-      </div>
+      </div> -->
       <div class="row">
         <div class="col-md-4">
           <form>
@@ -43,41 +43,43 @@
               <div class="form-group">
                 <label class="form-image">
                   <input id="avatar" type="file">
-                  <img src="../assets/img/default.png">
+                  <img src="../assets/img/default.png" id=prev>
                   <i class="mask fa fa-upload"></i>
                 </label>
+                <input type="hidden" name="avatar" id="img">
               </div>
             </div>
             <div class="form-group">
               <label>邮箱</label>
-              <input class="form-control" type="email" name="email" placeholder="请输入邮箱">
+              <input class="form-control" type="email" id="email" name="email" placeholder="请输入邮箱">
             </div>
             <div class="form-group">
               <label>昵称</label>
-              <input class="form-control" type="text" name="nickName" placeholder="请输入昵称">
+              <input class="form-control" type="text" id = "nickName" name="nickName" placeholder="请输入昵称">
             </div>
             <div class="form-group">
               <label>密码</label>
-              <input class="form-control" type="text" name="password" placeholder="请输入密码">
+              <input class="form-control" type="text" name="password" id="password" placeholder="请输入密码">
             </div>
             <div class="form-group">
               <div class="radio-inline">
-                <label><input type="radio" name="status" value="0">未激活</label>
+                <label><input type="radio" name="status" id="wjh" value="0">未激活</label>
               </div>
               <div class="radio-inline">
-                <label><input type="radio" name="status" value="1" checked>激活</label>
+                <label><input type="radio" name="status" id="jh" value="1" checked>激活</label>
               </div>
             </div>
             <div class="form-group">
               <div class="radio-inline">
-                <label><input type="radio" name="admin" checked>超级管理员</label>
+                <label><input type="radio" name="role" value="admin" id="admin" checked>超级管理员</label>
               </div>
               <div class="radio-inline">
-                <label><input type="radio" name="role" value="normal">普通用户</label>
+                <label><input type="radio" name="role" value="normal" id="normal">普通用户</label>
               </div>
             </div>
             <div class="form-group">
               <button id=addUser class="btn btn-primary" name="role" value="submit">添加</button>
+              <button id=editUser class="btn btn-primary" name="role" value="submit" style="display: none">修改</button>
             </div>
           </form>
         </div>
@@ -154,8 +156,8 @@
       <td>{{$value.nickName}}</td>
       <td>{{$value.status == 1 ? '激活':'未激活'}}</td>
       <td>{{$value.role == 1 ? '超级管理员' : '普通用户'}}</td>
-      <td class="text-center">
-        <a href="javascript:;" class="btn btn-default btn-xs">编辑</a>
+      <td class="text-center" data-id='{{$value._id}}'>
+        <a href="javascript:;" class="btn btn-default btn-xs edit">编辑</a>
         <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
       </td>
     </tr>
@@ -181,6 +183,7 @@
         $('tbody').html(str);
       }
 
+      //用户添加功能
       $('#addUser').on('click',function(){
         let formData = $('form').serialize();
         $.ajax({
@@ -196,6 +199,105 @@
           }
         });
       });
+
+      //完成图片上传功能
+
+      $('#avatar').on('change',function(){
+        //创建FormData对象
+        // console.log(this.files[0]);
+        // return;
+        var formData = new FormData();
+        formData.append('avatar',this.files[0]);
+        $.ajax({
+          type:'post',
+          url:'/upload',
+          data:formData,
+          processData:false,
+          contentType:false,
+          success:function(res){
+            console.log(res);
+            
+            $('#img').val(res[0].avatar);
+            $('#prev').attr('src',res[0].avatar);
+          }
+        })
+      });
+
+      //点击编辑功能 .edit 时间所在位置
+      //给她的父亲加一个自定义data-id 点击编辑按钮式
+      var id;
+      $('tbody').on('click','.edit',function(){
+        id = $(this).parent().attr('data-id');//获取到父元素id
+        $('form > h2').text('修改用户');
+        $('#addUser').text('修改')
+        //a 的爷爷 找到tr ,在找到tr的下标孩子为2的text
+        var trObj = $(this).parents('tr')
+        // console.log(trObj);
+        $('#email').val(trObj.children().eq(2).text());
+        $('#nickName').val(trObj.children().eq(3).text());
+        var status = trObj.children().eq(4).text();
+        var role = trObj.children().eq(5).text();
+        var imgScr = trObj.children().eq(1).find('img').attr('src');
+        // console.log(imgScr);图片路径
+        
+        if(imgScr){
+          $('#prev').attr("src",imgScr);
+          $('#img').val(imgScr);
+        } else {
+          $('#prev').attr("src","../assets/img/default.png");
+          $('#img').val("");
+        }
+
+        if(status == '激活') {
+          $('#jh').prop('checked',true)
+        } else {
+          $('#wjh').prop('checked',true)
+        }
+
+        if(role == '超级管理员') {
+          $('#admin').prop('checked',true)
+        } else {
+          $('#normal').prop('checked',true)
+        }
+
+        $('#addUser').hide();
+        $('#editUser').show();
+      });
+  
+        //给修改按钮注册点击事件 根据 id 修改用户
+        $('#editUser').on('click',function(){
+          // serialize 就是用于收集表单数据 只要表单里面的输入框的内容 有name属性就会收集到 
+          var formData = $('form').serialize();
+          $.ajax({
+              type:'put',
+              url:'/users/'+ id,
+              data:formData,
+              success:function(res){
+                var index = userArr.findIndex(item => item._id == res._id);
+                // console.log(index);
+                
+                userArr[index] = res;
+                
+                render(userArr);
+
+                $('#addUser').show();
+                $('#editUser').hide();
+                $('form > h2').text('添加新用户');
+                $('#img').val("");
+                $('#prev').attr('src', "../assets/img/default.png");
+                $('#email').val("");
+                $('#nickName').val("");
+                $('#admin').prop('checked', false);
+                $('#normal').prop('checked', true);
+                $('#jh').prop('checked', false);
+                $('#wjh').prop('checked', true);
+              }
+          })
+        })
+        
+
+        
+
     </script>
 
 </body>
